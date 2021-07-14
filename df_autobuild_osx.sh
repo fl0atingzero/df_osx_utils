@@ -106,6 +106,19 @@ echo ""
 echo "Creating new Doom2DF.app"
 cp -rv $SRCDIR/macosx/Doom2DF.app.base $SRCDIR/macosx/Doom2DF.app
 
+# checking for tmp - if present we delete it
+
+if [ -d $SRCDIR/$TMPDIR ]; then
+    echo "Cleaning founded $TMPDIR..."
+    rm -rv $SRCDIR/$TMPDIR
+fi
+
+# creating new tmpdir
+
+echo ""
+echo "Creating new $TMPDIR"
+mkdir -v $SRCDIR/$TMPDIR
+
 # creating libs directory
 
 echo ""
