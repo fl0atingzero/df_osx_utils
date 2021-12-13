@@ -1,16 +1,14 @@
-#!/bin/sh
+#!/bin/bash
 
-# DOOM 2D: FOREVER AUTOBUILDER FOR OS X - v0.1
-# (c) k_1nspired, 2021
+# DOOM 2D: FOREVER AUTOBUILDER FOR OS X - v0.11
+# (c) fl0atingzero, 2021
 #
 # USAGE: df_autobuild_osx.sh <SRCDIR> <DLIBDIR> <RESPATH>
 #     <SRCDIR> - directory where source files are placed
 #     <DLIBDIR> - directory where dynamic libs are placed
-#     <RESPATH> - path to resources (obviously win3d-d2df-latest.zip unpacked), directory containing "data", "maps" and "wads" dirs
+#     <RESPATH> - path to resources (usually win3d-d2df-latest.zip unpacked), directory containing "data", "maps" and "wads" dirs
 #     -p (optional) - pack to DMG using mkisofs/genisoimage (if present)
 #     -y (optional) - do not ask for pressing any key after finishing build process
-#
-# "PLEASE DO NOT ADD / to the parameters! e.g. /testdir, not /testdir/"
 #
 # ATTENTION! PLEASE MODIFY BEFORE USING!
 # warning: this version doensn't perform source dir checks
@@ -35,7 +33,7 @@ PACKUTIL=mkisofs
 
 # ----------------------------------------------------------------------------------------- #
 
-echo "Doom 2D: Forever autobuild script for OS X - v0.1 (c) k_1nspired, 2021"
+echo "Doom 2D: Forever autobuild script for OS X - v0.11 (c) fl0atingzero, 2021"
 echo ""
 
 # check for command line arguments count - should be not less than 3
@@ -47,17 +45,15 @@ then
     echo "USAGE: df_autobuild_osx.sh <SRCDIR> <DLIBDIR> <RESPATH> [-p] [-y]"
     echo "    <SRCDIR> - directory where source files are placed"
     echo "    <DLIBDIR> - directory where dynamic libs are placed"
-    echo "    <RESPATH> - path to resources (obviously win3d-d2df-latest.zip unpacked), directory containing "data", "maps" and "wads" dirs"
+    echo "    <RESPATH> - path to resources (usually win3d-d2df-latest.zip unpacked), directory containing "data", "maps" and "wads" dirs"
     echo "-p (optional) - pack to DMG using mkisofs/genisoimage (if present)"
     echo "-y (optional) - do not ask for pressing any key after finishing build process"
-    echo ""
-    echo "PLEASE DO NOT ADD / to the parameters! e.g. /testdir, not /testdir/"
 else
 
 # now set variables' values
-SRCDIR="$1"
-DLIBDIR="$2"
-RESPATH="$3"
+SRCDIR=$(echo $1 | sed 's:/*$::')
+DLIBDIR=$(echo $2 | sed 's:/*$::')
+RESPATH=$(echo $3 | sed 's:/*$::')
 
 # check for libs directory
 
