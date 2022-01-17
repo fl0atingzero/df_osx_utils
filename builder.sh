@@ -1,65 +1,114 @@
-!/bin/bash
+#!/bin/bash
 
 # DOOM 2D: FOREVER BUILDER AND PACKER FOR OS X - v0.9
 # (c) fl0atingzero, 2022
 #
-# USAGE: df_autobuild_osx.sh [SRCDIR] [RESPATH] [flags]
-#     <SRCDIR> - directory where source files are placed
-#     <RESPATH> - path to resources (usually win3d-d2df-latest.zip unpacked), directory containing "data", "maps" and "wads" dirs
+# USAGE: builder.sh [options]
+#     -s <SRCDIR> (REQUIRED)- directory where source files are placed
+#     -r <RESPATH> (REQUIRED) - path to resources (usually win3d-d2df-latest.zip unpacked), directory containing "data", "maps" and "wads" dirs
 #     -p (optional) - pack to DMG using mkisofs/genisoimage (if present)
 #     -y (optional) - do NOT ask for pressing any key after finishing build process
-#	  -l (optional) - do NOT resolve binary dependecies
-#     
+#     -l (optional) - do NOT resolve binary dependecies
+#     -h (optional) - show help
 # Python 3 is REQUIRED for libs packing (for mackpack), so it's supposed that it is in path
 # ATTENTION! PLEASE MODIFY BEFORE USING!
 # warning: this version doensn't perform source dir checks
 #
 
-TMPDIR="$SRCDIR/macosx/tmp"
-# directory for temporary files relative to srcdir
-OUTDIR="$SRCDIR/macosx/Doom2DF.app"
-# directory where bundle will be placed
-BUILDFLAGS="-dUSE_SDL2 -dUSE_SDLMIXER -dUSE_HOLMES"
+BUILDFLAGS="-dUSE_SDL2 -dUSE_SDLMIXER -dUSE_HOLMES -Fu/opt/local/lib -Fu/usr/local/lib"
 # default binary build flags
-HEADLESSFLAGS="-dUSE_SOUNDSTUB -dHEADLESS"
+HEADLESSFLAGS="-dUSE_SDLMIXER -dHEADLESS -Fu/opt/local/lib -Fu/usr/local/lib"
 # headless server build flags
 MACPACK="macpack" #python3 $SRCDIR/macpack/patcher.py"
 # command for running macpack (Python 3 is required)
 PACKUTIL=mkisofs
 # utility for creating DMG file (mkisofs or genisoimage)
 
-#TODO: CLI, 110, 127, 141, 148
+# ----------------------------------------------------------------------------------------- #
 
+#flags
+FLAG_P=0
+FLAG_Y=0
+FLAG_L=0
 
 # ----------------------------------------------------------------------------------------- #
 
+printhelp ()
+{
+	echo "USAGE: builder.sh [options]"
+    echo "    -s <SRCDIR> - directory where source files are placed"
+    echo "    -r <RESPATH> - path to resources (usually win3d-d2df-latest.zip unpacked), directory containing data, maps and wads dirs"
+    echo "    -p (optional) - pack to DMG using mkisofs/genisoimage (if present)"
+    echo "    -y (optional) - do not ask for pressing any key after finishing build process"
+    echo "    -l (optional) - do not resolve binary dependencies"
+    echo "    -h or no args - show this help"
+    echo ""
+    exit 0	
+}
+
+# ----------------------------------------------------------------------------------------- #
+
+echo ""
 echo "Doom 2D: Forever autobuild script for OS X - v0.9 (c) fl0atingzero, 2022"
 echo ""
 
-# check for command line arguments count - should be not less than 3
+# check for command line arguments count - should be not less than 1
 
-if [ "$#" -lt 3 ]; #if_args
-then
+if [ "$#" -lt 1 ]; then
     echo "Not enough arguments"
     echo ""
-    echo "USAGE: df_autobuild_osx.sh [SRCDIR] [RESPATH] [flags]"
-    echo "    <SRCDIR> - directory where source files are placed"
-    echo "    <RESPATH> - path to resources (usually win3d-d2df-latest.zip unpacked), directory containing "data", "maps" and "wads" dirs"
-    echo "    -p (optional) - pack to DMG using mkisofs/genisoimage (if present)"
-    echo "    -y (optional) - do not ask for pressing any key after finishing build process"
-    echo "	  -l (optional) - do NOT resolve binary dependecies"
-else
+	printhelp
+fi
 
-# now set variables' values
+# CLI
 
-#SRCDIR="."
-SRCDIR=$(echo $1 | sed 's:/*$::')
-RESPATH=$(echo $2 | sed 's:/*$::')
+while getopts "hs:r:pyl" flag
+do
+	case $flag in
+		h) printhelp;;
+		s) SRCDIR=$(echo $OPTARG | sed 's:/*$::');;
+		r) RESPATH=$(echo $OPTARG | sed 's:/*$::');;
+		p) FLAG_P=1;;
+		y) FLAG_Y=1;;
+		l) FLAG_L=1;;
+	esac
+done
 
+# checking for presence of required params
+
+if [ -z "$SRCDIR" ]; then
+	echo "ERROR: source dir $SRCDIR is required, but not provided or empty"
+	exit -1
+fi
+
+if [ -z "$RESPATH" ]; then
+	echo "ERROR: resources path $RESPATH is required, but not provided or empty"
+	exit -1
+fi
+
+# ----------------------------------------------------------------------------------------- #
+
+TMPDIR="$SRCDIR/macosx/tmp"
+# directory for temporary files relative to srcdir
+OUTDIR="$SRCDIR/macosx/Doom2DF.app"
+# directory where bundle will be placed
+
+# uncomment for debugging
+
+#echo "SRCDIR: $SRCDIR"
+#echo "OUTDIR: $OUTDIR"
+#echo "TMPDIR: $TMPDIR"
+#echo "RESPATH: $RESPATH"
+#echo "FLAG_P: $FLAG_P"
+#echo "FLAG_L: $FLAG_L"
+#echo "FLAG_Y: $FLAG_Y"
+#read
+
+# ----------------------------------------------------------------------------------------- #
 
 # check for source directory presence
 
-if not [ -e $SRCDIR/src/game/Doom2DF.lpr ];
+if ! [ -e $SRCDIR/src/game/Doom2DF.lpr ];
 then
     echo "ERROR with sourcedir $SRCDIR"
     exit -1
@@ -107,85 +156,98 @@ else
 	mkdir -v $TMPDIR
 fi
 
-# copying resources: FIXME - should be performed after compiling
-
-echo ""
-echo "Copying resources:"
-cp -rv $RESPATH/data $RESPATH/maps $RESPATH/wads $OUTDIR/Contents/Resources/
-
 # building from source
 
 cd $SRCDIR/src/game
 
-# clean tmp files - UNNECESSARY AT FIRST ATTEMPT
+export D2DF_BUILD_HASH="$(git rev-parse HEAD)"
 
-echo ""
-echo "Cleaning temporary files:"
-echo ""
-rm -rvf $SRCDIR/$TMPDIR/* $SRCDIR/$OUTDIR/{link.res,ppas*,Doom2DF*}
-
-# building headless version FIXME - some arguments are unnecessary or wrong
+# building headless version
 
 echo ""
 echo "Building headless version:"
 echo ""
-fpc -g -gl -gs -O3 $HEADLESSFLAGS -FU"$SRCDIR/$TMPDIR" -FE"$SRCDIR/$OUTDIR" -Ff"$SRCDIR/$LIBDIR" -Fu"$SRCDIR/$LIBDIR" -Fl"$SRCDIR/$LIBDIR" -oDoom2DF_H Doom2DF.lpr
+fpc -g -gl -gs $HEADLESSFLAGS -FU"$TMPDIR" -FE"$OUTDIR/Contents/MacOS" -oDoom2DF_H Doom2DF.lpr
 
 # clean tmp files
 
 echo ""
 echo "Cleaning temporary files:"
 echo ""
-rm -rvf $SRCDIR/$TMPDIR/* $SRCDIR/$OUTDIR/{link.res,ppas*}
+rm -rvf $TMPDIR/* $OUTDIR/Contents/MacOS/{link.res,ppas*}
 
-# building main version FIXME - some arguments are unnecessary or wrong
+# building main version
 
 echo ""
 echo "Building main version:"
 echo ""
-fpc -g -gl -gs -O3 $BUILDFLAGS -FU"$SRCDIR/$TMPDIR" -FE"$SRCDIR/$OUTDIR" -Ff"$SRCDIR/$LIBDIR" -Fu"$SRCDIR/$LIBDIR" -Fl"$SRCDIR/$LIBDIR" -oDoom2DF Doom2DF.lpr
+fpc -g -gl -gs $BUILDFLAGS -FU"$TMPDIR" -FE"$OUTDIR/Contents/MacOS" -oDoom2DF Doom2DF.lpr
 
-# fix library paths FIXME - should be reimplemented with macpack
+# copying resources:
+
 echo ""
-echo "Fixing library paths for:"
+echo "Copying resources:"
+cp -rv $RESPATH/data $RESPATH/maps $RESPATH/wads $OUTDIR/Contents/Resources/
 
-cd $SRCDIR/$LIBDIR
-for LIBNAME in *; do
-    echo "  $LIBNAME"
-    cd $SRCDIR/src/game
-    install_name_tool -change $DLIBPATHMAIN/$LIBNAME @executable_path/$LIBS/$LIBNAME $SRCDIR/$OUTDIR/Doom2DF
-    install_name_tool -change $DLIBPATHMAIN/$LIBNAME @executable_path/$LIBS/$LIBNAME $SRCDIR/$OUTDIR/Doom2DF_H
-done
+# checking for "-l" parameter
+# fix binary dependencies
+
+if [ "$FLAG_L" == "0" ]; then
+
+	# fix library paths
+	echo ""
+	echo "Fixing library paths"
+	
+	#cd $OUTDIR/Contents/MacOS
+	
+	$MACPACK -v -d $OUTDIR/Contents/libs $OUTDIR/Contents/MacOS/Doom2DF
+	$MACPACK -v -d $OUTDIR/Contents/libs $OUTDIR/Contents/MacOS/Doom2DF_H
+
+fi
 
 #done main operations
 
 # checking for "-p" parameter
 
-if [ "$4" == "-p" -o "$5" == "-p" ]; then
+if [ "$FLAG_P" == "1" ]; then
 
 # trying packing utility
 
-if hash $PACKUTIL 2>/dev/null; then
+	if hash $PACKUTIL 2>/dev/null; then
+   
+        cd $OUTDIR/..
         
         echo ""
-        echo "Creating $SRCDIR/macosx/Doom2DF.dmg"
+        echo "Creating $(pwd)/Doom2DF.dmg"
         echo ""
         
-        cd $SRCDIR/macosx
+        if [ -e $OUTDIR/../Doom2DF.root ]; then
+        	echo "Doom2DF.root found, trying to delete"
+        	rm -rv $OUTDIR/../Doom2DF.root
+        	echo ""
+        fi
+        
+        echo "creating new Doom2DF.root"
         mkdir -p Doom2DF.root
         echo ""
-        cp -rv Doom2DF.app  Doom2DF.root
+        cp -rv $OUTDIR  Doom2DF.root
+        echo ""
         
         $PACKUTIL -D -V "Doom 2D Forever" -no-pad -r -apple -file-mode 0555 -o Doom2DF.dmg Doom2DF.root
+        echo ""
+        
+        echo "trying to delete unnecessary Doom2DF.root"
+        rm -rv $OUTDIR/../Doom2DF.root
+        echo ""       
         
     else
-        echo "ERROR: $PACKUTIL not found!"
-fi
+ 		echo "ERROR: $PACKUTIL not found!"
+	fi
 fi
 
 # checking for "-y" parameter
 
-if [ "$4" == "-y" -o "$5" == "-y" ]; then
+if [ "$FLAG_Y" = "1" ]; then
     echo "Building complete!"
 else
     echo "Building complete! Press any key to exit builder..."
