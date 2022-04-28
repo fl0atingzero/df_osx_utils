@@ -10,7 +10,7 @@
 #     -y (optional) - do NOT ask for pressing any key after finishing build process
 #     -l (optional) - do NOT resolve binary dependecies
 #     -h (optional) - show help
-# Python 3 is REQUIRED for libs packing (for mackpack), so it's supposed that it is in path
+# dylibbuilder is required
 # ATTENTION! PLEASE MODIFY BEFORE USING!
 # warning: this version doensn't perform source dir checks
 #
@@ -19,8 +19,8 @@ BUILDFLAGS="-dUSE_SDL2 -dUSE_SDLMIXER -dUSE_HOLMES -Fu/opt/local/lib -Fu/usr/loc
 # default binary build flags
 HEADLESSFLAGS="-dUSE_SDLMIXER -dHEADLESS -Fu/opt/local/lib -Fu/usr/local/lib"
 # headless server build flags
-MACPACK="macpack" #python3 $SRCDIR/macpack/patcher.py"
-# command for running macpack (Python 3 is required)
+DYLIBBUNDLER="dylibbundler -ns -b -od -of"
+# command for running dylibbundler
 PACKUTIL=mkisofs
 # utility for creating DMG file (mkisofs or genisoimage)
 
@@ -198,10 +198,10 @@ if [ "$FLAG_L" == "0" ]; then
 	echo ""
 	echo "Fixing library paths"
 	
-	#cd $OUTDIR/Contents/MacOS
+	cd $OUTDIR/Contents/MacOS
 	
-	$MACPACK -v -d $OUTDIR/Contents/libs $OUTDIR/Contents/MacOS/Doom2DF
-	$MACPACK -v -d $OUTDIR/Contents/libs $OUTDIR/Contents/MacOS/Doom2DF_H
+	$DYLIBBUNDLER -d $OUTDIR/Contents/libs -x Doom2DF
+	$DYLIBBUNDLER -d $OUTDIR/Contents/libs -x Doom2DF_H
 
 fi
 
