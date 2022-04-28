@@ -10,7 +10,7 @@
 #     -y (optional) - do NOT ask for pressing any key after finishing build process
 #     -l (optional) - do NOT resolve binary dependecies
 #     -h (optional) - show help
-# dylibbuilder is required
+# dylibbundler is required
 # ATTENTION! PLEASE MODIFY BEFORE USING!
 # warning: this version doensn't perform source dir checks
 #
