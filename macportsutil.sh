@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#this script is for getting URL links to download specific links from MacPorts for specific OS X, downloading and extracting them
+# this script gets URL links for specific packages from MacPorts (for specific version of OS X), downloads and extracts them
 
-OUTDIR="/opt/local/"
+OUTDIR="/opt/local"
 URL="https://packages.macports.org"
 LIBS=("libsdl2"
       "libsdl2_mixer"
@@ -12,27 +12,34 @@ LIBS=("libsdl2"
       "flac"
       "mpg123"
       "opusfile"
-      "libopus")
+      "libopus"
+      "miniupnpc")
 DARWINVER="12"
 ARCH="x86_64"
+
+# ----------------------------------------------------------------------------- #
+# FLAG_D = 1 - script will parse all *.dylib files in $OUTDIR/lib with
+# install_name_tool to change paths from /opt/local/lib to $OUTDIR/lib
+# useful for cross-compilation to put libs somewhere other than /opt/local/lib
+
+FLAG_D=0
+OTOOL="otool -L"
+INSTALLNAMETOOL="install_name_tool"
+
+# ----------------------------------------------------------------------------- #
 
 PATTERN="darwin_$DARWINVER\.$ARCH"
 
 LIBFNAMES=()
 
-echo "This script will help you to obtain specific libs from MacPorts' repository" #. Press y to continue..."
-#read -s -n 1 key
-#if ! [ "$key" = "y" ]; then
-#   exit 0
-#fi
+echo "This script will help you to obtain specific libs from MacPorts' repository"
 
-#echo "OK, proceeding"
-echo "Getting libs' links"
+echo "Getting links"
 echo ""
 
 for LIBNAME in ${LIBS[*]}
 do
-    # this horrifying thing actually parses macports' download page and find required link
+    # this horrible thing parses macports' download page and find required link
 
     ANSWER=$( curl -s "$URL/$LIBNAME/" | grep -Eo "$LIBNAME[^>]+\.$PATTERN\.tbz2" | grep -v "universal" | tr " " "\n" | sort | uniq | tail -n 1 )
 
@@ -73,3 +80,33 @@ do
     echo "extracting ${LIBS[$i]}..."
     tar --strip-components=3 -xjvf ${LIBFNAMES[$i]} ./opt/local/lib
 done
+
+# parsing dylibs
+
+if [ "$FLAG_D" = 1 ]; then
+    echo "Now we'll parse dylibs in $OUTDIR"
+
+    cd $OUTDIR
+    echo ""
+    echo "List of dylibs:"
+    find . -type f -name "*.dylib" | cut -c 3-
+    echo ""
+    for DNAME in $(find . -type f -name "*.dylib" | cut -c 3-)
+    do
+        echo "processing $DNAME:"
+        LNAME=$OUTDIR/
+        LNAME+=$($OTOOL $DNAME |  grep -Eo -e '.*\.dylib' | grep "/opt/local/" | head -n 1 | tr -d "\t" | cut -c 12-)
+        echo "$INSTALLNAMETOOL -id $LNAME $DNAME"
+        $INSTALLNAMETOOL -id $LNAME $DNAME
+        for DEPNAME in $($OTOOL $DNAME |  grep -Eo -e '.*\.dylib' | grep "/opt/local/" | tail +2 | tr -d "\t")
+        do      
+            FIXNAME=$OUTDIR/
+            FIXNAME+=$(echo $DEPNAME | cut -c 12-)
+
+            echo "$INSTALLNAMETOOL -change $DEPNAME $FIXNAME $DNAME"
+            $INSTALLNAMETOOL -change $DEPNAME $FIXNAME $DNAME
+        done
+        echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    done
+
+fi

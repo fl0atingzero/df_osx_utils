@@ -12,17 +12,19 @@
 #     -h (optional) - show help
 # dylibbundler is required
 # ATTENTION! PLEASE MODIFY BEFORE USING!
-# warning: this version doensn't perform source dir checks
+# WARNING: THIS VERSION DOENSN'T PERFORM SOURCE DIR CHECKS
 #
-
-BUILDFLAGS="-dUSE_SDL2 -dUSE_SDLMIXER -dUSE_HOLMES -Fu/opt/local/lib -Fu/usr/local/lib"
+# build flags used both for main and headless
+COMMONFLAGS="-g -gl -gs -Fu/opt/local/lib"
 # default binary build flags
-HEADLESSFLAGS="-dUSE_SDLMIXER -dHEADLESS -Fu/opt/local/lib -Fu/usr/local/lib"
+MAINFLAGS="-dUSE_SDL2 -dUSE_SDLMIXER -dUSE_HOLMES -oDoom2DF Doom2DF.lpr"
 # headless server build flags
-DYLIBBUNDLER="dylibbundler -ns -b -od -of"
+HEADLESSFLAGS="-dUSE_GLSTUB -dUSE_SDLMIXER -dHEADLESS -oDoom2DF_H Doom2DF.lpr"
 # command for running dylibbundler
-PACKUTIL=mkisofs
+DYLIBBUNDLER="dylibbundler -ns -b -od -of"
 # utility for creating DMG file (mkisofs or genisoimage)
+PACKUTIL=mkisofs
+
 
 # ----------------------------------------------------------------------------------------- #
 
@@ -104,9 +106,9 @@ OUTDIR="$SRCDIR/macosx/Doom2DF.app"
 #echo "FLAG_Y: $FLAG_Y"
 #read
 
-# ----------------------------------------------------------------------------------------- #
+echo "# ----------------------------------------------------------------------------------------- #"
 
-# check for source directory presence
+echo "check for source directory presence"
 
 if ! [ -e $SRCDIR/src/game/Doom2DF.lpr ];
 then
@@ -114,8 +116,9 @@ then
     exit -1
 fi
 
-# check for resource directory
-
+echo ""
+echo "check for resource directory"
+echo ""
 echo "Checking resources path: $RESPATH"
 
 for RESNAME in "$RESPATH/data" "$RESPATH/maps" "$RESPATH/wads"; do
@@ -127,16 +130,17 @@ for RESNAME in "$RESPATH/data" "$RESPATH/maps" "$RESPATH/wads"; do
         exit -1
     fi
 done
-
+echo "# ----------------------------------------------------------------------------------------- #"
 #main_part
+echo ""
+echo "main_part"
 
 echo ""
-
-# checking for Doom2DF.app - if present we delete it
+echo "checking for Doom2DF.app - if present we delete it"
 
 if [ -d $OUTDIR ]; then
     echo "$OUTDIR found - trying to delete it"
-    rm -rv $OUTDIR
+    rm -rvf $OUTDIR
 fi
 
 # creating new Doom2DF.app
@@ -145,49 +149,56 @@ echo ""
 echo "Creating new $OUTDIR"
 cp -rv $SRCDIR/macosx/Doom2DF.app.base $OUTDIR
 
-# checking for tmp - if present we clean it, if not - create
+echo ""
+echo "checking for tmp - if present we clean it, if not - create"
 
 if [ -d $TMPDIR ];
 then
     echo "tempdir $TMPDIR found - trying to clean"
-    rm -rv $TMPDIR/*
+    find $TMPDIR -mindepth 1 -delete
 else
 	echo "tempdir $TMPDIR not found - creating"
 	mkdir -v $TMPDIR
 fi
 
-# building from source
+echo ""
+echo "# ----------------------------------------------------------------------------------------- #"
+
+echo "building from source"
 
 cd $SRCDIR/src/game
 
 export D2DF_BUILD_HASH="$(git rev-parse HEAD)"
 
-# building headless version
+# building headless
 
 echo ""
-echo "Building headless version:"
+echo "Building headless:"
 echo ""
-fpc -g -gl -gs $HEADLESSFLAGS -FU"$TMPDIR" -FE"$OUTDIR/Contents/MacOS" -oDoom2DF_H Doom2DF.lpr
+fpc $COMMONFLAGS -FU$TMPDIR -FE$OUTDIR/Contents/MacOS $HEADLESSFLAGS
 
 # clean tmp files
 
 echo ""
 echo "Cleaning temporary files:"
 echo ""
-rm -rvf $TMPDIR/* $OUTDIR/Contents/MacOS/{link.res,ppas*}
+find $TMPDIR -mindepth 1 -delete && $OUTDIR/Contents/MacOS/{link.res,ppas*}
+echo "# ----------------------------------------------------------------------------------------- #"
 
-# building main version
+# building main
 
 echo ""
-echo "Building main version:"
+echo "Building main:"
 echo ""
-fpc -g -gl -gs $BUILDFLAGS -FU"$TMPDIR" -FE"$OUTDIR/Contents/MacOS" -oDoom2DF Doom2DF.lpr
+fpc $COMMONFLAGS -FU$TMPDIR -FE$OUTDIR/Contents/MacOS $MAINFLAGS
+echo "# ----------------------------------------------------------------------------------------- #"
+echo ""
 
 # copying resources:
-
 echo ""
 echo "Copying resources:"
 cp -rv $RESPATH/data $RESPATH/maps $RESPATH/wads $OUTDIR/Contents/Resources/
+echo "# ----------------------------------------------------------------------------------------- #"
 
 # checking for "-l" parameter
 # fix binary dependencies
@@ -196,16 +207,21 @@ if [ "$FLAG_L" == "0" ]; then
 
 	# fix library paths
 	echo ""
-	echo "Fixing library paths"
+	echo "Fixing library dependecies paths"
 	
 	cd $OUTDIR/Contents/MacOS
-	
-	$DYLIBBUNDLER -d $OUTDIR/Contents/libs -x Doom2DF
-	$DYLIBBUNDLER -d $OUTDIR/Contents/libs -x Doom2DF_H
+	echo ""
 
+	$DYLIBBUNDLER -d $OUTDIR/Contents/libs -x Doom2DF
+    echo "# ----------------------------------------------------------------------------------------- #"
+    echo ""
+	$DYLIBBUNDLER -d $OUTDIR/Contents/libs -x Doom2DF_H
+    echo "# ----------------------------------------------------------------------------------------- #"
+    echo ""
 fi
 
-#done main operations
+# main actions are done
+echo "main actions are done"
 
 # checking for "-p" parameter
 
@@ -214,7 +230,9 @@ if [ "$FLAG_P" == "1" ]; then
 # trying packing utility
 
 	if hash $PACKUTIL 2>/dev/null; then
-   
+
+        # packing bundle to DMG
+
         cd $OUTDIR/..
         
         echo ""
@@ -223,21 +241,21 @@ if [ "$FLAG_P" == "1" ]; then
         
         if [ -e $OUTDIR/../Doom2DF.root ]; then
         	echo "Doom2DF.root found, trying to delete"
-        	rm -rv $OUTDIR/../Doom2DF.root
+        	rm -rvf $OUTDIR/../Doom2DF.root
         	echo ""
         fi
         
         echo "creating new Doom2DF.root"
         mkdir -p Doom2DF.root
         echo ""
-        cp -rv $OUTDIR  Doom2DF.root
+        cp -rvf $OUTDIR Doom2DF.root
         echo ""
         
         $PACKUTIL -D -V "Doom 2D Forever" -no-pad -r -apple -file-mode 0555 -o Doom2DF.dmg Doom2DF.root
         echo ""
         
         echo "trying to delete unnecessary Doom2DF.root"
-        rm -rv $OUTDIR/../Doom2DF.root
+        find $OUTDIR/../Doom2DF.root -delete
         echo ""       
         
     else
