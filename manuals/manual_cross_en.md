@@ -1,5 +1,5 @@
-Cross-compilating Doom 2D: Forever from Linux to OS X
-=====================================================
+Cross-compiling Doom 2D: Forever from Linux to OS X
+===================================================
 
 *NOTE: this manual is written for Arch Linux and pacman. Those who prefer other distros and package manager should find the appropriate packages themselves*
 
