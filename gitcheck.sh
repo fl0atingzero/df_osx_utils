@@ -15,4 +15,6 @@ if [ "${#OUTPUT}" -ne "0" ]; then
 else
     echo "There are updates on remote, performing actions"
     #do something here
+    # for example:
+    # /bin/bash -e ./crossbuilder.sh 2>&1 | tee /home/vlad/dfcross/buildlogs/build_$(date +%F_%H-%M-%S).log
 fi

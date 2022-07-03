@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# DOOM 2D: FOREVER BUILDER AND PACKER FOR OS X - v0.9
+# DOOM 2D: FOREVER BUILDER AND PACKER FOR OS X - v1.0
 # (c) fl0atingzero, 2022
 #
 # USAGE: builder.sh [options]
@@ -10,21 +10,19 @@
 #     -y (optional) - do NOT ask for pressing any key after finishing build process
 #     -l (optional) - do NOT resolve binary dependecies
 #     -h (optional) - show help
+# ATTENTION! PLEASE MODIFY BEFORE USING! THIS VERSION DOENSN'T PERFORM SOURCE DIR CHECKS!
 # dylibbundler is required
-# ATTENTION! PLEASE MODIFY BEFORE USING!
-# WARNING: THIS VERSION DOENSN'T PERFORM SOURCE DIR CHECKS
-#
+
 # build flags used both for main and headless
 COMMONFLAGS="-g -gl -gs -Fu/opt/local/lib"
 # default binary build flags
-MAINFLAGS="-dUSE_SDL2 -dUSE_SDLMIXER -dUSE_HOLMES -oDoom2DF Doom2DF.lpr"
+MAINFLAGS="-dUSE_SDL2 -dUSE_SDLMIXER -dUSE_NINIUPNPC -dENABLE_HOLMES -oDoom2DF Doom2DF.lpr"
 # headless server build flags
-HEADLESSFLAGS="-dUSE_GLSTUB -dUSE_SDLMIXER -dHEADLESS -oDoom2DF_H Doom2DF.lpr"
+HEADLESSFLAGS="-dUSE_SYSSTUB -dUSE_GLSTUB -dHEADLESS -dUSE_SDLMIXER -oDoom2DF_H Doom2DF.lpr"
 # command for running dylibbundler
 DYLIBBUNDLER="dylibbundler -ns -b -od -of"
 # utility for creating DMG file (mkisofs or genisoimage)
 PACKUTIL=mkisofs
-
 
 # ----------------------------------------------------------------------------------------- #
 
@@ -51,7 +49,7 @@ printhelp ()
 # ----------------------------------------------------------------------------------------- #
 
 echo ""
-echo "Doom 2D: Forever autobuild script for OS X - v0.9 (c) fl0atingzero, 2022"
+echo "Doom 2D: Forever autobuild script for OS X - v1.0 (c) fl0atingzero, 2022"
 echo ""
 
 # check for command line arguments count - should be not less than 1
@@ -182,7 +180,8 @@ fpc $COMMONFLAGS -FU$TMPDIR -FE$OUTDIR/Contents/MacOS $HEADLESSFLAGS
 echo ""
 echo "Cleaning temporary files:"
 echo ""
-find $TMPDIR -mindepth 1 -delete && $OUTDIR/Contents/MacOS/{link.res,ppas*}
+find $TMPDIR -mindepth 1 -delete
+find $OUTDIR/Contents/MacOS/ \( -name "link.res" -o -name "ppas*"\) -delete
 echo "# ----------------------------------------------------------------------------------------- #"
 
 # building main
@@ -200,7 +199,7 @@ echo "Copying resources:"
 cp -rv $RESPATH/data $RESPATH/maps $RESPATH/wads $OUTDIR/Contents/Resources/
 echo "# ----------------------------------------------------------------------------------------- #"
 
-# checking for "-l" parameter
+# checking for "-l" flag
 # fix binary dependencies
 
 if [ "$FLAG_L" == "0" ]; then

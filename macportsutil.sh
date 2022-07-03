@@ -98,7 +98,7 @@ if [ "$FLAG_D" = 1 ]; then
         LNAME+=$($OTOOL $DNAME |  grep -Eo -e '.*\.dylib' | grep "/opt/local/" | head -n 1 | tr -d "\t" | cut -c 12-)
         echo "$INSTALLNAMETOOL -id $LNAME $DNAME"
         $INSTALLNAMETOOL -id $LNAME $DNAME
-        for DEPNAME in $($OTOOL $DNAME |  grep -Eo -e '.*\.dylib' | grep "/opt/local/" | tail +2 | tr -d "\t")
+        for DEPNAME in $($OTOOL $DNAME |  grep -Eo -e '.*\.dylib' | grep "/opt/local/" | tail +1 | tr -d "\t")
         do      
             FIXNAME=$OUTDIR/
             FIXNAME+=$(echo $DEPNAME | cut -c 12-)
